@@ -1,0 +1,183 @@
+// PDF Generation utility for SprintFlow AI Retrospective
+// Note: This requires jsPDF to be installed: npm install jspdf
+
+import { type SprintRetrospective } from './api-services';
+
+// Import jsPDF dynamically
+let jsPDF: any;
+
+export const generateRetrospectivePDF = async (retrospective: SprintRetrospective): Promise<void> => {
+  try {
+    // Dynamic import of jsPDF
+    if (!jsPDF) {
+      const jsPDFModule = await import('jspdf');
+      jsPDF = jsPDFModule.default || jsPDFModule.jsPDF || jsPDFModule;
+    }
+
+    // Check if jsPDF is available
+    if (!jsPDF) {
+      console.error('jsPDF is not available. Please ensure jsPDF is properly installed.');
+      alert('PDF generation library is not available. Please install jsPDF: npm install jspdf');
+      return;
+    }
+
+    console.group('📄 Generating Retrospective PDF');
+    console.log('Sprint:', retrospective.sprint.sprintName);
+
+    // Create new PDF document
+    const doc = new jsPDF();
+    let yPosition = 20;
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 20;
+    const contentWidth = pageWidth - (2 * margin);
+
+    // Helper function to add text with word wrapping
+    const addText = (text: string, fontSize: number = 12, isBold: boolean = false, color: string = 'black') => {
+      if (isBold) {
+        doc.setFont('helvetica', 'bold');
+      } else {
+        doc.setFont('helvetica', 'normal');
+      }
+      doc.setFontSize(fontSize);
+
+      if (color !== 'black') {
+        const colorMap: { [key: string]: [number, number, number] } = {
+          'blue': [0, 100, 200],
+          'green': [0, 150, 0],
+          'red': [200, 0, 0],
+          'gray': [100, 100, 100]
+        };
+        if (colorMap[color]) {
+          doc.setTextColor(...colorMap[color]);
+        }
+      } else {
+        doc.setTextColor(0, 0, 0);
+      }
+
+      const lines = doc.splitTextToSize(text, contentWidth);
+      doc.text(lines, margin, yPosition);
+      yPosition += (lines.length * (fontSize * 0.5)) + 5;
+
+      // Add new page if needed
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    };
+
+    const addSection = (title: string, items: string[], color: string = 'black') => {
+      addText(title, 14, true, color);
+      yPosition += 5;
+
+      items.forEach(item => {
+        addText(`• ${item}`, 11, false, 'gray');
+        yPosition += 2;
+      });
+      yPosition += 10;
+    };
+
+    // PDF Header
+    addText('SprintCoPilot Retrospective Report', 20, true, 'blue');
+    yPosition += 5;
+
+    // Sprint Information
+    addText(`Sprint: ${retrospective.sprint.sprintName}`, 16, true);
+    addText(`Project: ${retrospective.sprint.projectKey}`, 12);
+    addText(`Duration: ${retrospective.sprint.startDate} to ${retrospective.sprint.endDate}`, 12);
+    yPosition += 15;
+
+    // Executive Summary
+    addText('Executive Summary', 16, true, 'blue');
+    yPosition += 5;
+    addText(retrospective.summary, 12);
+    yPosition += 15;
+
+    // Sprint Metrics
+    addText('Sprint Metrics', 16, true, 'blue');
+    yPosition += 5;
+    const metrics = retrospective.metrics;
+    addText(`Story Points: ${metrics.completedPoints}/${metrics.committedPoints} (${metrics.completionRate}% completion rate)`, 12);
+    addText(`Tickets: ${metrics.completedTickets}/${metrics.totalTickets} completed`, 12);
+    yPosition += 15;
+
+    // What Went Well
+    if (retrospective.whatWentWell.length > 0) {
+      addSection('What Went Well', retrospective.whatWentWell, 'green');
+    }
+
+    // Key Achievements
+    if (retrospective.keyAchievements.length > 0) {
+      addSection('Key Achievements', retrospective.keyAchievements, 'green');
+    }
+
+    // What Could Be Improved
+    if (retrospective.whatCouldBeImproved.length > 0) {
+      addSection('Areas for Improvement', retrospective.whatCouldBeImproved, 'red');
+    }
+
+    // Challenges
+    if (retrospective.challenges.length > 0) {
+      addSection('Challenges Faced', retrospective.challenges, 'red');
+    }
+
+    // Action Items
+    if (retrospective.actionItems.length > 0) {
+      addText('Action Items', 16, true, 'blue');
+      yPosition += 5;
+
+      retrospective.actionItems.forEach((item, index) => {
+        addText(`${index + 1}. ${item.title}`, 12, true);
+        addText(`   Description: ${item.description}`, 11);
+        addText(`   Priority: ${item.priority} | Owner: ${item.owner}`, 11, false, 'gray');
+        yPosition += 5;
+      });
+      yPosition += 10;
+    }
+
+    // Team Insights
+    if (retrospective.teamInsights) {
+      addText('Team Insights', 16, true, 'blue');
+      yPosition += 5;
+      addText(retrospective.teamInsights, 12);
+      yPosition += 15;
+    }
+
+    // AI Recommendations
+    if (retrospective.recommendations.length > 0) {
+      addSection('AI Recommendations', retrospective.recommendations, 'blue');
+    }
+
+    // Footer
+    const currentDate = new Date().toLocaleDateString();
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated by SprintFlow AI on ${currentDate}`, margin, doc.internal.pageSize.height - 15);
+
+    // Generate filename
+    const fileName = `${retrospective.sprint.projectKey}_${retrospective.sprint.sprintName}_Retrospective.pdf`.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    // Download the PDF
+    doc.save(fileName);
+
+    console.log(`✅ PDF generated successfully: ${fileName}`);
+    console.groupEnd();
+
+    // Show success message
+    alert(`Retrospective PDF downloaded successfully!\nFile: ${fileName}`);
+
+  } catch (error) {
+    console.error('❌ PDF Generation Failed:', error);
+    alert('Failed to generate PDF. Please try again.');
+  }
+};
+
+// Alternative PDF generation using HTML2Canvas + jsPDF (for complex layouts)
+export const generateRetrospectivePDFFromHTML = (retrospective: SprintRetrospective, elementId: string): void => {
+  try {
+    // This would require both jsPDF and html2canvas
+    console.log('HTML to PDF conversion not implemented yet');
+    console.log('Use generateRetrospectivePDF() for text-based PDF generation');
+  } catch (error) {
+    console.error('HTML to PDF generation failed:', error);
+  }
+};
