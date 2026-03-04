@@ -15,4 +15,59 @@ paths:
       summary: Health check
       tags:
       - Health
+  /jira/oauth:
+    get:
+      description: Redirects user to Jira Cloud OAuth2 login page
+      produces:
+      - application/json
+      responses:
+        "307":
+          description: Redirect
+          headers:
+            Location:
+              description: OAuth login URL
+              type: string
+          schema:
+            type: string
+      summary: Connect Jira OAuth
+      tags:
+      - OAuth
+  /jira/rallback:
+    get:
+      consumes:
+      - application/json
+      description: Handles OAuth callback from Jira Cloud and exchanges authorization
+        code for an access token
+      parameters:
+      - description: Authorization code returned by Atlassian
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: OAuth state value
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Access token response
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Token exchange failed
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Jira OAuth callback
+      tags:
+      - OAuth
 swagger: "2.0"
