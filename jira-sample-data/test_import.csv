@@ -1,0 +1,76 @@
+Issue Type|Summary|Description|Priority|Story Points|Epic Link|Assignee|Status
+Story|Implement JWT based login endpoint|Develop secure REST login API validating credentials against hashed passwords. Generate JWT access token with 15 minute expiry and refresh token valid for 7 days. Store refresh token in database with expiry timestamp. Add structured logging and integration tests.|High|8|User Authentication Revamp|Arjun|To Do
+Story|Implement refresh token rotation mechanism|Build refresh endpoint where each refresh invalidates the previous token. Prevent replay attacks and handle expired token cases. Requires database schema update and middleware modification.|High|5|User Authentication Revamp|Rahul|To Do
+Story|Add role based access control|Design RBAC system supporting Admin Manager and Sales roles. Implement middleware permission checks and update UI to hide restricted features. Includes migration script.|High|8|User Authentication Revamp|Karthik|To Do
+Bug|Inactive users can still authenticate|Authentication middleware does not validate active status flag allowing inactive users to obtain valid JWT tokens. Add validation and regression tests.|High|3|User Authentication Revamp|Kavya|To Do
+Story|Build contact CRUD REST APIs|Create scalable REST endpoints for contact create read update and delete. Support pagination sorting filtering and validation. Optimize for response under 200 milliseconds for 10k records.|High|8|Contact Management Module|Zaid|To Do
+Story|Implement bulk contact upload via CSV|Allow upload of CSV files up to 20k rows. Validate schema detect duplicates generate error report and process asynchronously using background jobs.|High|13|Contact Management Module|Arjun|To Do
+Story|Add advanced contact filtering system|Support filtering by tags region activity date and lead score. Requires dynamic query builder and indexing strategy.|High|8|Contact Management Module|Rahul|To Do
+Story|Design contact activity timeline UI|Create frontend timeline component displaying emails calls and notes chronologically. Integrate with backend aggregation API.|Medium|5|Contact Management Module|Meera|To Do
+Bug|Duplicate contacts created during retry logic|Network retry causes duplicate entries due to missing idempotency validation. Implement request ID validation and safe retry mechanism.|High|5|Contact Management Module|Rohit|To Do
+Story|Implement lead scoring engine version one|Develop rule based scoring algorithm based on engagement frequency and deal size. Support recalculation batch job and scoring audit logging.|High|8|Lead Scoring Engine|Zaid|To Do
+Story|Integrate lead score into contact profile UI|Display dynamic lead score with visual indicators and explanation tooltip. Requires API integration and frontend updates.|Medium|5|Lead Scoring Engine|Sneha|To Do
+Task|Optimize database indexing strategy|Analyze slow queries and introduce composite indexes for contact and lead tables. Benchmark performance before and after changes.|Medium|5|Performance Optimization|jriyasamd|To Do
+Story|Build sales analytics dashboard|Develop dashboard showing monthly revenue conversion rate and pipeline health. Includes aggregation APIs and responsive charts.|Medium|8|Reporting Dashboard|Varun|To Do
+Bug|Revenue aggregation mismatch in reports|Fix incorrect SQL grouping logic and timezone mismatch causing dashboard totals to differ from database totals.|High|5|Reporting Dashboard|Kavya|To Do
+Story|Implement Redis caching layer|Introduce caching for frequent contact queries. Implement cache invalidation strategy on update and delete operations.|High|8|Performance Optimization|Karthik|To Do
+Story|Add API rate limiting middleware|Implement token based and IP based throttling with configurable limits and standardized error responses.|Medium|5|Performance Optimization|Zaid|To Do
+Story|Implement monitoring and alerting setup|Configure monitoring for latency error rate and CPU usage. Add alert rules for SLA breach and integrate with alerting system.|Medium|5|Performance Optimization|jriyasamd|To Do
+Story|Add email verification during signup|Send verification email with expiring token and prevent login until verified successfully.|Medium|5|User Authentication Revamp|Arjun|To Do
+Bug|Password reset link expires incorrectly|Expiry timestamp miscalculation causes premature expiration of reset links. Fix logic and add unit tests.|Medium|3|User Authentication Revamp|Rohit|To Do
+Story|Implement contact tagging system|Allow users to add and remove tags and filter contacts by tags. Requires new join table and UI update.|Medium|5|Contact Management Module|Rahul|To Do
+Story|Add contact export functionality|Allow exporting filtered contacts as CSV using streaming response to handle large datasets safely.|Medium|5|Contact Management Module|Sneha|To Do
+Task|Upgrade Node runtime to latest LTS|Upgrade runtime version and validate compatibility with all dependencies. Run regression tests before deployment.|Medium|3|Performance Optimization|jriyasamd|To Do
+Story|Implement audit logging for admin actions|Log sensitive actions such as role changes and account deactivation. Ensure logs are tamper resistant and searchable.|High|8|User Authentication Revamp|Karthik|To Do
+Bug|Dashboard charts flicker on load|Frontend component causes re render loop due to incorrect state dependency handling. Fix rendering logic.|Low|3|Reporting Dashboard|Varun|To Do
+Story|Add multi region support for contacts|Enable region specific filtering and reporting. Requires schema changes API updates and UI adjustments.|High|8|Contact Management Module|Zaid|To Do
+Story|Implement search using ElasticSearch|Integrate ElasticSearch for fast contact search. Implement indexing pipeline and handle index failure recovery.|High|13|Contact Management Module|Arjun|To Do
+Bug|ElasticSearch index not syncing on delete|Event listener fails to remove deleted contacts from search index. Ensure consistency between DB and index.|High|5|Contact Management Module|Kavya|To Do
+Story|Create background job queue system|Introduce job queue for heavy operations such as scoring recalculation and bulk upload processing. Include retry logic and monitoring.|High|8|Performance Optimization|Karthik|To Do
+Story|Implement session timeout handling|Automatically log out inactive users after configurable timeout period and invalidate tokens.|Medium|3|User Authentication Revamp|Rahul|To Do
+Bug|Login API returns 500 on invalid payload|Missing input validation causes server error on invalid login payload. Add validation middleware and proper error responses.|High|3|User Authentication Revamp|Rohit|To Do
+Story|Add drag and drop lead assignment UI|Allow sales managers to reassign leads visually with real time backend updates and confirmation feedback.|Medium|5|Lead Scoring Engine|Meera|To Do
+Task|Standardize structured logging format|Implement consistent JSON logging format across services for better observability and debugging.|Medium|3|Performance Optimization|jriyasamd|To Do
+Story|Implement MFA using email OTP|Add second factor verification step after password login. Generate short lived OTP and validate before granting access.|High|8|User Authentication Revamp|Arjun|To Do
+Bug|High latency in contact list endpoint|Investigate slow database queries and optimize using indexing and caching improvements.|High|5|Performance Optimization|Rahul|To Do
+Story|Add customizable dashboard widgets|Allow users to rearrange dashboard modules and persist layout preferences in user settings.|Medium|5|Reporting Dashboard|Sneha|To Do
+Story|Implement user profile management API|Develop endpoints for users to update personal information including name phone number and profile image URL. Ensure validation authorization checks and proper response handling.|Medium|5|User Authentication Revamp|Karthik|To Do
+Story|Add profile image upload with object storage integration|Allow users to upload profile images stored securely in object storage. Implement resizing validation and secure access control.|Medium|8|User Authentication Revamp|Arjun|To Do
+Bug|Profile image not updating in UI|Frontend caching causes stale profile image to persist after successful upload. Fix cache invalidation and refresh logic.|Low|3|User Authentication Revamp|Sneha|To Do
+Story|Implement soft delete for contacts|Mark contacts as inactive instead of permanently deleting them. Update queries to exclude deleted records and add restore functionality.|Medium|5|Contact Management Module|Rahul|To Do
+Task|Add database migration for soft delete flag|Create migration script adding deleted timestamp column and update repository layer queries accordingly.|Medium|3|Contact Management Module|jriyasamd|To Do
+Story|Implement contact ownership transfer|Allow managers to transfer contact ownership between sales representatives with full audit trail logging.|High|8|Contact Management Module|Zaid|To Do
+Bug|Ownership transfer not updating activity logs|Audit entry is not created when contact ownership changes. Ensure logging middleware captures update event.|Medium|3|Contact Management Module|Kavya|To Do
+Story|Add lead conversion tracking|Track when a lead converts into a paying customer and update analytics metrics accordingly.|High|8|Lead Scoring Engine|Rahul|To Do
+Story|Create pipeline stage management module|Allow administrators to configure custom sales pipeline stages with drag and drop ordering and persistent storage.|High|13|Lead Scoring Engine|Arjun|To Do
+Bug|Pipeline stage reorder not persisting|API does not save reordered stages correctly causing reset on refresh. Fix persistence logic.|Medium|3|Lead Scoring Engine|Rohit|To Do
+Story|Implement scheduled report emails|Allow users to schedule weekly or monthly reports automatically sent via email. Include configuration UI and background scheduler.|Medium|8|Reporting Dashboard|Meera|To Do
+Task|Create PDF generation service for reports|Develop backend service to generate downloadable PDF reports using dynamic templates and aggregated data.|Medium|5|Reporting Dashboard|Karthik|To Do
+Bug|Generated PDF formatting broken on large datasets|Fix layout overflow issue when report tables exceed page size and ensure proper pagination handling.|Medium|5|Reporting Dashboard|Kavya|To Do
+Story|Add dark mode support for dashboard|Implement theme toggle and update styling across all dashboard components to support dark mode.|Low|5|Reporting Dashboard|Varun|To Do
+Story|Introduce feature flag system|Implement feature flag framework to enable gradual rollout of features and safe experimentation.|High|8|Performance Optimization|jriyasamd|To Do
+Task|Add health monitoring endpoint for scoring service|Expose readiness and liveness endpoints for infrastructure monitoring and orchestration.|Low|2|Performance Optimization|Zaid|To Do
+Bug|Scoring batch job crashes on null values|Null edge cases cause scoring service to crash during nightly batch job. Add validation and safe guards.|High|5|Lead Scoring Engine|Rohit|To Do
+Story|Implement webhook notifications for contact updates|Allow external systems to subscribe to contact change events via secure webhook callbacks.|High|8|Contact Management Module|Arjun|To Do
+Task|Secure webhook endpoint with signature validation|Validate webhook payload signatures to prevent spoofing and replay attacks.|High|5|Contact Management Module|Karthik|To Do
+Story|Add advanced analytics filters|Allow filtering reports by region representative product line and time range with optimized query execution.|Medium|5|Reporting Dashboard|Sneha|To Do
+Bug|Timezone mismatch in analytics filters|Date filtering produces incorrect results due to timezone offset misalignment. Fix backend and frontend conversion logic.|Medium|3|Reporting Dashboard|Kavya|To Do
+Story|Implement optimistic UI updates for contact edits|Update UI immediately while backend processes request and roll back on failure to improve responsiveness.|Medium|5|Contact Management Module|Meera|To Do
+Task|Refactor legacy API error handling|Standardize error responses and remove inconsistent HTTP status codes across services.|Medium|5|Performance Optimization|jriyasamd|To Do
+Story|Add bulk lead reassignment feature|Allow managers to reassign multiple leads in one action with audit trail logging and confirmation dialog.|Medium|8|Lead Scoring Engine|Rahul|To Do
+Bug|Bulk reassignment times out for large datasets|Backend processing logic is inefficient for high volume operations. Optimize queries and batching strategy.|High|8|Lead Scoring Engine|Zaid|To Do
+Story|Integrate third party email tracking API|Track email opens and link clicks to dynamically influence lead scoring calculation.|High|13|Lead Scoring Engine|Arjun|To Do
+Task|Improve caching invalidation strategy|Ensure cache clears properly on contact updates scoring changes and deletion events.|Medium|5|Performance Optimization|Karthik|To Do
+Story|Add real time notifications using WebSockets|Notify users instantly about lead updates and assignment changes using persistent WebSocket connections.|High|13|Contact Management Module|Arjun|To Do
+Bug|WebSocket connection drops under load|Concurrent connections exceed threshold causing unexpected disconnects. Improve scaling and connection handling.|High|8|Performance Optimization|Zaid|To Do
+Story|Implement data retention policy automation|Automatically archive contacts inactive for more than two years and allow administrator restore option.|Medium|5|Contact Management Module|Rahul|To Do
+Task|Add automated database backup scheduler|Configure daily automated backups and verify restoration process with periodic testing.|High|5|Performance Optimization|jriyasamd|To Do
+Story|Introduce audit trail search functionality|Allow administrators to search audit logs by user action type and date range.|Medium|5|User Authentication Revamp|Karthik|To Do
+Bug|Audit logs missing IP address field|Logging middleware does not capture client IP correctly for sensitive actions. Fix implementation.|Medium|3|User Authentication Revamp|Rohit|To Do
+Story|Implement API versioning strategy|Introduce version two API routes while maintaining backward compatibility for existing clients.|High|8|Performance Optimization|jriyasamd|To Do
+Task|Conduct load testing for 50k concurrent users|Simulate high traffic scenario and document bottlenecks and scaling limitations.|High|8|Performance Optimization|Zaid|To Do
+Story|Add password strength validation rules|Enforce strong password policy including minimum length numeric and special character requirements.|Medium|3|User Authentication Revamp|Arjun|To Do
+Bug|Signup form allows weak passwords|Frontend validation allows weak passwords to bypass checks. Fix client side validation logic.|Medium|2|User Authentication Revamp|Sneha|To Do
+Story|Implement email notification preferences|Allow users to configure which system notifications they receive via email.|Medium|5|User Authentication Revamp|Meera|To Do
+Task|Add API request tracing with correlation IDs|Implement distributed tracing by attaching correlation IDs to each API request.|Medium|5|Performance Optimization|jriyasamd|To Do
+Story|Implement contact merge functionality|Allow merging duplicate contacts while preserving activity history and references.|High|8|Contact Management Module|Rahul|To Do
