@@ -39,3 +39,36 @@ type JiraProject struct {
 		Description string `json:"description"`
 	} `json:"projectCategory"`
 }
+
+type Priority string
+type TicketType string
+
+const (
+	PriorityLow      Priority = "Low"
+	PriorityMedium   Priority = "Medium"
+	PriorityHigh     Priority = "High"
+	PriorityCritical Priority = "Critical"
+
+	TypeBug   TicketType = "Bug"
+	TypeStory TicketType = "Story"
+	TypeTask  TicketType = "Task"
+	TypeEpic  TicketType = "Epic"
+)
+
+type Ticket struct {
+	ID             string     `json:"id"`
+	Key            string     `json:"key"`
+	Summary        string     `json:"summary"`
+	Status         string     `json:"status"`
+	Priority       Priority   `json:"priority"` // "Low" | "Medium" | "High" | "Critical"
+	Type           TicketType `json:"type"`     // "Bug" | "Story" | "Task" | "Epic"
+	Assignee       *string    `json:"assignee"`
+	AssigneeName   *string    `json:"assigneeName"`
+	AssigneeAvatar *string    `json:"assigneeAvatar"`
+	Reporter       string     `json:"reporter"`
+	StoryPoints    int        `json:"storyPoints"`
+	Labels         []string   `json:"labels"`
+	CreatedDate    string     `json:"createdDate"`
+	UpdatedDate    string     `json:"updatedDate"`
+	ParentIssueKey *string    `json:"parentIssueKey"`
+}

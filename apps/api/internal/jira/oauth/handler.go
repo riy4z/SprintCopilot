@@ -48,7 +48,7 @@ func Callback(c *gin.Context) {
 
 	// store token in memory
 	config.JiraToken = token
-
+	
 	// request cloud resources
 	req, err := http.NewRequest(
 		"GET",
@@ -59,10 +59,10 @@ func Callback(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-
-	req.Header.Set("Authorization", "Bearer "+config.JiraToken.AccessToken)
+	
+	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 	req.Header.Set("Accept", "application/json")
-
+	
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -76,22 +76,23 @@ func Callback(c *gin.Context) {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	}
-
+	
 	err = json.NewDecoder(resp.Body).Decode(&resources)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-
+	
 	if len(resources) == 0 {
 		c.JSON(500, gin.H{
 			"error": "no jira resources found",
 		})
 		return
 	}
-
+	
 	// store cloudID in memory
 	config.CloudID = resources[0].ID
+	SaveToken(token, resources[0].ID)
 
 	c.JSON(200, gin.H{
 		"message":  "oauth success",

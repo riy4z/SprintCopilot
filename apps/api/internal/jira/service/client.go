@@ -2,21 +2,26 @@ package jira
 
 import (
 	"net/http"
-	"time"
 )
 
 type Client struct {
 	httpClient *http.Client
-	token      string
 	cloudID    string
+	token      string
 }
 
-func NewClient(token string, cloudID string) *Client {
+func NewClient(httpClient *http.Client, cloudID string) *Client {
 	return &Client{
-		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-		token:   token,
-		cloudID: cloudID,
+		httpClient: httpClient,
+		cloudID:    cloudID,
+	}
+}
+
+// NewClientWithToken creates a client with a token string
+func NewClientWithToken(token string, cloudID string) *Client {
+	return &Client{
+		httpClient: &http.Client{},
+		cloudID:    cloudID,
+		token:      token,
 	}
 }

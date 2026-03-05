@@ -1,3 +1,110 @@
+definitions:
+  jira.Priority:
+    enum:
+    - Low
+    - Medium
+    - High
+    - Critical
+    type: string
+    x-enum-varnames:
+    - PriorityLow
+    - PriorityMedium
+    - PriorityHigh
+    - PriorityCritical
+  jira.ProjectCategory:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  jira.ProjectResponse:
+    properties:
+      Avatar:
+        type: string
+      Category:
+        type: string
+      avatarUrls:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+      projectCategory:
+        $ref: '#/definitions/jira.ProjectCategory'
+      sprintGraph:
+        items:
+          $ref: '#/definitions/jira.SprintData'
+        type: array
+      teamSize:
+        type: integer
+      velocity:
+        type: integer
+    type: object
+  jira.SprintData:
+    properties:
+      sprintName:
+        type: string
+      velocity:
+        type: integer
+    type: object
+  jira.Ticket:
+    properties:
+      assignee:
+        type: string
+      assigneeAvatar:
+        type: string
+      assigneeName:
+        type: string
+      createdDate:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      labels:
+        items:
+          type: string
+        type: array
+      parentIssueKey:
+        type: string
+      priority:
+        allOf:
+        - $ref: '#/definitions/jira.Priority'
+        description: '"Low" | "Medium" | "High" | "Critical"'
+      reporter:
+        type: string
+      status:
+        type: string
+      storyPoints:
+        type: integer
+      summary:
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/jira.TicketType'
+        description: '"Bug" | "Story" | "Task" | "Epic"'
+      updatedDate:
+        type: string
+    type: object
+  jira.TicketType:
+    enum:
+    - Bug
+    - Story
+    - Task
+    - Epic
+    type: string
+    x-enum-varnames:
+    - TypeBug
+    - TypeStory
+    - TypeTask
+    - TypeEpic
 info:
   contact: {}
 paths:
@@ -15,6 +122,45 @@ paths:
       summary: Health check
       tags:
       - Health
+  /jira/backlogs/{boardId}:
+    get:
+      consumes:
+      - application/json
+      description: Fetch all backlog issues for a specific Jira board
+      parameters:
+      - description: Board ID
+        in: path
+        minimum: 1
+        name: boardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of backlog tickets
+          schema:
+            items:
+              $ref: '#/definitions/jira.Ticket'
+            type: array
+        "400":
+          description: Invalid board ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Jira Backlog Issues
+      tags:
+      - Jira
   /jira/callback:
     get:
       consumes:
@@ -71,7 +217,7 @@ paths:
       tags:
       - OAuth
   /jira/projects:
-    post:
+    get:
       consumes:
       - application/json
       description: Fetch all Jira projects from the connected Jira cloud instance
@@ -79,19 +225,20 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
-          schema: {}
+          description: List of Jira projects
+          schema:
+            items:
+              $ref: '#/definitions/jira.ProjectResponse'
+            type: array
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
+            additionalProperties: true
             type: object
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
-            additionalProperties:
-              type: string
+            additionalProperties: true
             type: object
       summary: Get Jira Projects
       tags:
