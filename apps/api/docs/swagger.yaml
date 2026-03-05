@@ -15,24 +15,7 @@ paths:
       summary: Health check
       tags:
       - Health
-  /jira/oauth:
-    get:
-      description: Redirects user to Jira Cloud OAuth2 login page
-      produces:
-      - application/json
-      responses:
-        "307":
-          description: Redirect
-          headers:
-            Location:
-              description: OAuth login URL
-              type: string
-          schema:
-            type: string
-      summary: Connect Jira OAuth
-      tags:
-      - OAuth
-  /jira/rallback:
+  /jira/callback:
     get:
       consumes:
       - application/json
@@ -70,4 +53,47 @@ paths:
       summary: Jira OAuth callback
       tags:
       - OAuth
+  /jira/oauth:
+    get:
+      description: Redirects user to Jira Cloud OAuth2 login page
+      produces:
+      - application/json
+      responses:
+        "307":
+          description: Redirect
+          headers:
+            Location:
+              description: OAuth login URL
+              type: string
+          schema:
+            type: string
+      summary: Connect Jira OAuth
+      tags:
+      - OAuth
+  /jira/projects:
+    post:
+      consumes:
+      - application/json
+      description: Fetch all Jira projects from the connected Jira cloud instance
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Jira Projects
+      tags:
+      - Jira
 swagger: "2.0"

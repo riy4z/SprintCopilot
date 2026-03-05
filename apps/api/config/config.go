@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
 )
 
 type Config struct {
@@ -16,6 +17,8 @@ type Config struct {
 }
 
 var AppConfig Config
+var JiraToken *oauth2.Token
+var CloudID string
 
 func LoadConfig() {
 	err:= godotenv.Load()

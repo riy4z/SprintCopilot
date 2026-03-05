@@ -36,33 +36,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/jira/oauth": {
-            "get": {
-                "description": "Redirects user to Jira Cloud OAuth2 login page",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "OAuth"
-                ],
-                "summary": "Connect Jira OAuth",
-                "responses": {
-                    "307": {
-                        "description": "Redirect",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "headers": {
-                            "Location": {
-                                "type": "string",
-                                "description": "OAuth login URL"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/jira/rallback": {
+        "/jira/callback": {
             "get": {
                 "description": "Handles OAuth callback from Jira Cloud and exchanges authorization code for an access token",
                 "consumes": [
@@ -111,6 +85,71 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/jira/oauth": {
+            "get": {
+                "description": "Redirects user to Jira Cloud OAuth2 login page",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OAuth"
+                ],
+                "summary": "Connect Jira OAuth",
+                "responses": {
+                    "307": {
+                        "description": "Redirect",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "OAuth login URL"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/jira/projects": {
+            "post": {
+                "description": "Fetch all Jira projects from the connected Jira cloud instance",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Jira"
+                ],
+                "summary": "Get Jira Projects",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }

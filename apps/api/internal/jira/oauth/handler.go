@@ -1,7 +1,9 @@
 package oauth
 
 import (
+	"encoding/json"
 	"net/http"
+	"sprint-copilot/config"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,8 +37,8 @@ func Login(c *gin.Context) {
 func Callback(c *gin.Context) {
 
 	code := c.Query("code")
-	token, err := ExchangeCode(c.Request.Context(), code)
 
+	token, err := ExchangeCode(c.Request.Context(), code)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": err.Error(),
@@ -44,7 +46,55 @@ func Callback(c *gin.Context) {
 		return
 	}
 
+	// store token in memory
+	config.JiraToken = token
+
+	// request cloud resources
+	req, err := http.NewRequest(
+		"GET",
+		"https://api.atlassian.com/oauth/token/accessible-resources",
+		nil,
+	)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	req.Header.Set("Authorization", "Bearer "+config.JiraToken.AccessToken)
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	var resources []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&resources)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(resources) == 0 {
+		c.JSON(500, gin.H{
+			"error": "no jira resources found",
+		})
+		return
+	}
+
+	// store cloudID in memory
+	config.CloudID = resources[0].ID
+
 	c.JSON(200, gin.H{
-		"access_token": token.AccessToken,
+		"message":  "oauth success",
+		"cloud_id": config.CloudID,
 	})
 }
