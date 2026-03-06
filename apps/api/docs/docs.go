@@ -36,33 +36,64 @@ const docTemplate = `{
                 }
             }
         },
-        "/jira/oauth": {
+        "/jira/backlogs/{boardId}": {
             "get": {
-                "description": "Redirects user to Jira Cloud OAuth2 login page",
+                "description": "Fetch all backlog issues for a specific Jira board",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "OAuth"
+                    "Jira"
                 ],
-                "summary": "Connect Jira OAuth",
+                "summary": "Get Jira Backlog Issues",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
-                    "307": {
-                        "description": "Redirect",
+                    "200": {
+                        "description": "List of backlog tickets",
                         "schema": {
-                            "type": "string"
-                        },
-                        "headers": {
-                            "Location": {
-                                "type": "string",
-                                "description": "OAuth login URL"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/jira.Ticket"
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid board ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
             }
         },
-        "/jira/rallback": {
+        "/jira/callback": {
             "get": {
                 "description": "Handles OAuth callback from Jira Cloud and exchanges authorization code for an access token",
                 "consumes": [
@@ -115,6 +146,233 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/jira/oauth": {
+            "get": {
+                "description": "Redirects user to Jira Cloud OAuth2 login page",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OAuth"
+                ],
+                "summary": "Connect Jira OAuth",
+                "responses": {
+                    "307": {
+                        "description": "Redirect",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "OAuth login URL"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/jira/projects": {
+            "get": {
+                "description": "Fetch all Jira projects from the connected Jira cloud instance",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Jira"
+                ],
+                "summary": "Get Jira Projects",
+                "responses": {
+                    "200": {
+                        "description": "List of Jira projects",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/jira.ProjectResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "jira.Priority": {
+            "type": "string",
+            "enum": [
+                "Low",
+                "Medium",
+                "High",
+                "Critical"
+            ],
+            "x-enum-varnames": [
+                "PriorityLow",
+                "PriorityMedium",
+                "PriorityHigh",
+                "PriorityCritical"
+            ]
+        },
+        "jira.ProjectCategory": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "jira.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "Avatar": {
+                    "type": "string"
+                },
+                "Category": {
+                    "type": "string"
+                },
+                "avatarUrls": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "projectCategory": {
+                    "$ref": "#/definitions/jira.ProjectCategory"
+                },
+                "sprintGraph": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/jira.SprintData"
+                    }
+                },
+                "teamSize": {
+                    "type": "integer"
+                },
+                "velocity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "jira.SprintData": {
+            "type": "object",
+            "properties": {
+                "sprintName": {
+                    "type": "string"
+                },
+                "velocity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "jira.Ticket": {
+            "type": "object",
+            "properties": {
+                "assignee": {
+                    "type": "string"
+                },
+                "assigneeAvatar": {
+                    "type": "string"
+                },
+                "assigneeName": {
+                    "type": "string"
+                },
+                "createdDate": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parentIssueKey": {
+                    "type": "string"
+                },
+                "priority": {
+                    "description": "\"Low\" | \"Medium\" | \"High\" | \"Critical\"",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/jira.Priority"
+                        }
+                    ]
+                },
+                "reporter": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "storyPoints": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"Bug\" | \"Story\" | \"Task\" | \"Epic\"",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/jira.TicketType"
+                        }
+                    ]
+                },
+                "updatedDate": {
+                    "type": "string"
+                }
+            }
+        },
+        "jira.TicketType": {
+            "type": "string",
+            "enum": [
+                "Bug",
+                "Story",
+                "Task",
+                "Epic"
+            ],
+            "x-enum-varnames": [
+                "TypeBug",
+                "TypeStory",
+                "TypeTask",
+                "TypeEpic"
+            ]
         }
     }
 }`

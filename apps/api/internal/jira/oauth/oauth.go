@@ -9,6 +9,10 @@ import (
 
 var JiraConf *oauth2.Config
 
+func init() {
+	JiraConf = getOAuthConfig()
+}
+
 func getOAuthConfig() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     config.AppConfig.JiraClientId,
@@ -17,6 +21,9 @@ func getOAuthConfig() *oauth2.Config {
 			"read:jira-work",
 			"write:jira-work",
 			"read:jira-user",
+			"read:issue-details:jira",
+			"read:board-scope:jira-software",
+			"read:project:jira",
 			"offline_access",
 		},
 		RedirectURL: config.AppConfig.RedirectURL,

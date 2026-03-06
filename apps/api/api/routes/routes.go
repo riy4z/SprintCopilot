@@ -2,6 +2,7 @@ package routes
 
 import (
 	health "sprint-copilot/internal/health"
+	jira "sprint-copilot/internal/jira"
 	oauth "sprint-copilot/internal/jira/oauth"
 
 	"github.com/gin-gonic/gin"
@@ -14,12 +15,29 @@ func InitRoutes(r *gin.Engine) {
 	OauthRoutes(r)
 	HealthRoutes(r)
 	SwaggerRoutes(r)
+	jiraRoutes(r)
 }
 
 func OauthRoutes(r *gin.Engine) {
 	r.GET("/jira/oauth", oauth.Login)
 	r.GET("/jira/callback", oauth.Callback)
 }
+
+func jiraRoutes(r *gin.Engine){
+	r.GET("/jira/projects", jira.GetProjects)
+	r.GET("/jira/:boardId/backlogs", jira.GetBacklogs)
+	// r.POST("/jira/<projectKey>/sprints", oauth.Callback)
+	// r.POST("/jira/<projectKey>/team", oauth.Callback) 
+	// r.POST("/jira/<projectKey>/dependency/", oauth.Callback)
+	// r.POST("/jira/<projectKey>/<sprintId>/burndown", oauth.Callback)
+}
+
+// func AIRoutes(r *gin.Engine){
+// 	r.POST("/ai/backlog/<projectKey>/health",oauth.Callback)
+// 	r.POST("/ai/predict/storypoints", oauth.Callback)
+// 	r.POST("/ai/autoassign", oauth.Callback)
+// 	r.POST("/ai/retrospective/<projectKey>/<sprintId>", oauth.Callback)
+// }
 
 func HealthRoutes(r *gin.Engine) {
 	r.GET("/health", health.HealthHandler)
