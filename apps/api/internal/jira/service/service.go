@@ -22,8 +22,6 @@ func (c *Client) FetchProjects(ctx context.Context) ([]ProjectResponse, error) {
 		return nil, err
 	}
 
-	// Authorization header is automatically handled by oauth2.NewClient when using OAuth2
-	// For direct token usage, we need to set it manually
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
@@ -167,4 +165,105 @@ func (c *Client) FetchBacklogs(ctx context.Context, boardId int) ([]Ticket, erro
 	}
 
 	return tickets, nil
+}
+
+func (c *Client) FetchSprints(ctx context.Context, boardId int) ([]map[string]any, error){
+	sprintURL := fmt.Sprintf(
+		"https://api.atlassian.com/ex/jira/%s/rest/agile/1.0/board/%d/sprint",
+		c.cloudID,
+		boardId,
+	)
+
+	sprintreq, err := http.NewRequestWithContext(ctx, http.MethodGet, sprintURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	sprintreq.Header.Set("Accept", "application/json")
+		if c.token != "" {
+		sprintreq.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+
+	sprintresp, err := c.httpClient.Do(sprintreq)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(sprintresp)
+
+	defer sprintresp.Body.Close()
+	
+	var sprints struct{
+		Values []map[string] any
+	}
+	err = json.NewDecoder(sprintresp.Body).Decode(&sprints)
+
+	if err !=nil{
+		return nil, err
+	}
+
+
+	return sprints.Values, nil
+}
+
+
+func (c *Client) FetchTeamMembers(ctx context.Context, projectKey string) (*ProjectTeamResponse, error) {
+
+	url := fmt.Sprintf(
+		"https://api.atlassian.com/ex/jira/%s/rest/api/3/user/assignable/search?project=%s",
+		c.cloudID,
+		projectKey,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json")
+
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var users []map[string]any
+
+	err = json.NewDecoder(resp.Body).Decode(&users)
+	if err != nil {
+		return nil, err
+	}
+
+	var response ProjectTeamResponse
+	response.ProjectKey = projectKey
+	response.Velocity = 17
+
+	for _, u := range users {
+
+		member := TeamMember{
+			UserId:  u["accountId"].(string),
+			Name:    u["displayName"].(string),
+			Velocity: 0,
+			SprintHistory: []map[string]any{},
+		}
+
+		if email, ok := u["emailAddress"].(string); ok {
+			member.Email = email
+		}
+
+		if avatar, ok := u["avatarUrls"].(map[string]any); ok {
+			if url, ok := avatar["24x24"].(string); ok {
+				member.AvatarUrl = url
+			}
+		}
+
+		response.TeamMembers = append(response.TeamMembers, member)
+	}
+
+	return &response, nil
 }

@@ -74,3 +74,54 @@ func GetBacklogs(c *gin.Context) {
 	}
 	c.JSON(200, backlogs)
 }
+
+// GetSprints godoc
+// @Summary Get Sprints by Project
+// @Description Fetch all Sprint under Jira projects from the connected Jira cloud instance
+// @Tags Jira
+// @Accept json
+// @Produce json
+// @Success 200 {array} jira.ProjectResponse "List of Jira projects"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /jira/projects [get]
+func GetSprints(c *gin.Context) {
+
+	boardId := c.Param("boardId")
+	boardIdInt, err := strconv.Atoi(boardId)
+
+	client, cloudID, err := oauth.GetOAuthClient(c.Request.Context())
+	if err != nil {
+		c.JSON(401, gin.H{"error": "not authenticated"})
+		return
+	}
+
+	jiraClient := jira.NewClient(client,cloudID)
+
+	projects, err := jiraClient.FetchSprints(c.Request.Context(), boardIdInt)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, projects)
+}
+
+
+func GetTeamMembers(c *gin.Context) {
+	projectKey := c.Param("projectKey")
+	client, cloudID, err := oauth.GetOAuthClient(c.Request.Context())
+		if err != nil {
+		c.JSON(401, gin.H{"error": "not authenticated"})
+		return
+	}
+
+	jiraClient := jira.NewClient(client, cloudID)
+	team, err := jiraClient.FetchTeamMembers(c.Request.Context(), projectKey)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, team)
+}
