@@ -26,7 +26,8 @@ func OauthRoutes(r *gin.Engine) {
 func jiraRoutes(r *gin.Engine){
 	r.GET("/jira/projects", jira.GetProjects)
 	r.GET("/jira/:boardId/backlogs", jira.GetBacklogs)
-	// r.POST("/jira/<projectKey>/sprints", oauth.Callback)
+	r.GET("/jira/projects/:projectKey/team", jira.GetTeamMembers)
+	r.GET("/jira/:boardId/sprints", jira.GetSprints)
 	// r.POST("/jira/<projectKey>/team", oauth.Callback) 
 	// r.POST("/jira/<projectKey>/dependency/", oauth.Callback)
 	// r.POST("/jira/<projectKey>/<sprintId>/burndown", oauth.Callback)

@@ -1,5 +1,7 @@
 package jira
 
+import "time"
+
 type ProjectCategory struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -71,4 +73,35 @@ type Ticket struct {
 	CreatedDate    string     `json:"createdDate"`
 	UpdatedDate    string     `json:"updatedDate"`
 	ParentIssueKey *string    `json:"parentIssueKey"`
+}
+
+type Sprint struct {
+	ProjectKey    string          `json:"projectKey"`
+	Velocity      int             `json:"velocity"`
+	SprintHistory []SprintHistory `json:"sprintHistory"`
+}
+
+type SprintHistory struct {
+	ID               string    `json:"id"`
+	Name             string    `json:"name"`
+	StartDate        time.Time `json:"startDate"`
+	EndDate          time.Time `json:"endDate"`
+	CompletedPoints  int       `json:"completedPoints"`
+	CommittedPoints  int       `json:"committedPoints"`
+	CompletedTickets int       `json:"completedTickets"`
+}
+
+type TeamMember struct {
+	UserId  		string 		`json:"userId"`
+	Name 			string 		`json:"name"`
+	Email 			string 		`json:"email"`
+	AvatarUrl 		string 		`json:"avatarUrl"`
+	Velocity 		int8 		`json:"velocity"`
+	SprintHistory 	[]map[string]any `json:"sprintHistory"`
+}
+
+type ProjectTeamResponse struct {
+	ProjectKey		string 		`json:"projectKey"`
+	Velocity 		int8		`json:"velocity"`
+	TeamMembers		[]TeamMember `json:"teamMembers"`
 }
