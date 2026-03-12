@@ -14,6 +14,7 @@ type Config struct {
 	JiraClientId string
 	JiraSecret string
 	RedirectURL string
+	OpenAIKey string
 }
 
 var AppConfig Config
@@ -30,4 +31,5 @@ func LoadConfig() {
 	AppConfig.JiraClientId = os.Getenv("JIRA_CLIENT_ID")
 	AppConfig.JiraSecret = os.Getenv("JIRA_SECRET")
 	AppConfig.RedirectURL = os.Getenv("OAUTH_REDIRECT_URL")
+	AppConfig.OpenAIKey = os.Getenv("OPENAI_KEY")
 }
