@@ -1,7 +1,9 @@
 package jira
 
 import (
+	"context"
 	"net/http"
+	"sync"
 )
 
 type Client struct {
@@ -10,18 +12,56 @@ type Client struct {
 	token      string
 }
 
-func NewClient(httpClient *http.Client, cloudID string) *Client {
-	return &Client{
-		httpClient: httpClient,
-		cloudID:    cloudID,
+
+type Service struct {
+	mu              sync.RWMutex
+	httpClient      *http.Client
+	cloudID         string
+	getOAuthClient  func(ctx context.Context) (*http.Client, string, error)
+}
+
+
+func NewService(getOAuthClient func(ctx context.Context) (*http.Client, string, error)) *Service {
+	return &Service{
+		getOAuthClient: getOAuthClient,
 	}
 }
 
-// NewClientWithToken creates a client with a token string
-func NewClientWithToken(token string, cloudID string) *Client {
-	return &Client{
-		httpClient: &http.Client{},
-		cloudID:    cloudID,
-		token:      token,
+
+func (s *Service) GetClient(ctx context.Context) (*Client, error) {
+	s.mu.RLock()
+	if s.httpClient != nil && s.cloudID != "" {
+		client := &Client{
+			httpClient: s.httpClient,
+			cloudID:    s.cloudID,
+		}
+		s.mu.RUnlock()
+		return client, nil
 	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if s.httpClient != nil && s.cloudID != "" {
+		return &Client{
+			httpClient: s.httpClient,
+			cloudID:    s.cloudID,
+		}, nil
+	}
+
+	// Get OAuth client
+	httpClient, cloudID, err := s.getOAuthClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	s.httpClient = httpClient
+	s.cloudID = cloudID
+
+	return &Client{
+		httpClient: s.httpClient,
+		cloudID:    s.cloudID,
+	}, nil
 }
