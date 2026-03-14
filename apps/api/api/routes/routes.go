@@ -45,9 +45,8 @@ func jiraRoutes(r *gin.Engine, handler *jira.Handler){
 }
 
 func AIRoutes(r *gin.Engine, handler *ai.Handler){
-	r.POST("/ai/test", handler.SendPrompt)
+	r.POST("/ai/predict/storypoints", handler.PredictStoryPoints)
 // 	r.POST("/ai/backlog/<projectKey>/health",oauth.Callback)
-// 	r.POST("/ai/predict/storypoints", oauth.Callback)
 // 	r.POST("/ai/autoassign", oauth.Callback)
 // 	r.POST("/ai/retrospective/<projectKey>/<sprintId>", oauth.Callback)
 }
