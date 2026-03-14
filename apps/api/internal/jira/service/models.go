@@ -2,6 +2,8 @@ package jira
 
 import "time"
 
+//Projects
+
 type ProjectCategory struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -42,6 +44,8 @@ type JiraProject struct {
 	} `json:"projectCategory"`
 }
 
+// Backlog / Ticket
+
 type Priority string
 type TicketType string
 
@@ -57,23 +61,41 @@ const (
 	TypeEpic  TicketType = "Epic"
 )
 
-type Ticket struct {
-	ID             string     `json:"id"`
-	Key            string     `json:"key"`
-	Summary        string     `json:"summary"`
-	Status         string     `json:"status"`
-	Priority       Priority   `json:"priority"` // "Low" | "Medium" | "High" | "Critical"
-	Type           TicketType `json:"type"`     // "Bug" | "Story" | "Task" | "Epic"
-	Assignee       *string    `json:"assignee"`
-	AssigneeName   *string    `json:"assigneeName"`
-	AssigneeAvatar *string    `json:"assigneeAvatar"`
-	Reporter       string     `json:"reporter"`
-	StoryPoints    int        `json:"storyPoints"`
-	Labels         []string   `json:"labels"`
-	CreatedDate    string     `json:"createdDate"`
-	UpdatedDate    string     `json:"updatedDate"`
-	ParentIssueKey *string    `json:"parentIssueKey"`
+type IssueLink struct {
+	Type      string `json:"type"`      // "Blocks", "Blocked by", etc.
+	IssueKey  string `json:"issueKey"`  // Related issue key
+	Direction string `json:"direction"` // "outward" or "inward"
 }
+
+type Ticket struct {
+	ID             string       `json:"id"`
+	Key            string       `json:"key"`
+	Summary        string       `json:"summary"`
+	Description    string       `json:"description"`
+	Status         string       `json:"status"`
+	Priority       Priority     `json:"priority"` // "Low" | "Medium" | "High" | "Critical"
+	Type           TicketType   `json:"type"`     // "Bug" | "Story" | "Task" | "Epic"
+	Assignee       *string      `json:"assignee"`
+	AssigneeName   *string      `json:"assigneeName"`
+	AssigneeAvatar *string      `json:"assigneeAvatar"`
+	Reporter       string       `json:"reporter"`
+	StoryPoints    int          `json:"storyPoints"`
+	Labels         []string     `json:"labels"`
+	CreatedDate    string       `json:"createdDate"`
+	UpdatedDate    string       `json:"updatedDate"`
+	ParentIssueKey *string      `json:"parentIssueKey"`
+	IssueLinks     []IssueLink  `json:"issueLinks"`
+}
+
+type JiraDescription struct {
+	Content []struct {
+		Content []struct {
+			Text string `json:"text"`
+		} `json:"content"`
+	} `json:"content"`
+}
+
+//Sprint
 
 type Sprint struct {
 	ProjectKey    string          `json:"projectKey"`
@@ -91,6 +113,8 @@ type SprintHistory struct {
 	CompletedTickets int       `json:"completedTickets"`
 }
 
+//Team Member
+
 type TeamMember struct {
 	UserId  		string 		`json:"userId"`
 	Name 			string 		`json:"name"`
@@ -104,4 +128,29 @@ type ProjectTeamResponse struct {
 	ProjectKey		string 		`json:"projectKey"`
 	Velocity 		int8		`json:"velocity"`
 	TeamMembers		[]TeamMember `json:"teamMembers"`
+}
+
+// Dependency Graph
+
+type DependencyNode struct {
+	ID           string   `json:"id"`
+	Summary      string   `json:"summary"`
+	Assignee     *string  `json:"assignee"`
+	Priority     string   `json:"priority"`
+	IsBlocked    bool     `json:"isBlocked"`
+	IsBlocker    bool     `json:"isBlocker"`
+	IsInCycle    bool     `json:"isInCycle"`
+	IsSprintSafe bool     `json:"isSprintSafe"`
+}
+
+type DependencyEdge struct {
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Type  string `json:"type"`
+	Label string `json:"label"`
+}
+
+type DependencyGraphData struct {
+	Nodes []DependencyNode `json:"nodes"`
+	Edges []DependencyEdge `json:"edges"`
 }

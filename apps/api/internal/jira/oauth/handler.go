@@ -94,8 +94,5 @@ func Callback(c *gin.Context) {
 	config.CloudID = resources[0].ID
 	SaveToken(token, resources[0].ID)
 
-	c.JSON(200, gin.H{
-		"message":  "oauth success",
-		"cloud_id": config.CloudID,
-	})
+	c.Redirect(302, "http://localhost:5173/dashboard")
 }

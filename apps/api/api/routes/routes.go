@@ -17,6 +17,7 @@ func InitRoutes(r *gin.Engine) {
 	// Initialize Jira service
 	jiraSvc := jiraService.NewService(oauth.GetOAuthClient)
 	jiraHandler := jira.NewHandler(jiraSvc)
+	api:=r.Group("/api/v1")
 
 	// Initialize OpenAI service
 	aiSvc, _ := ai.NewService()
@@ -25,7 +26,7 @@ func InitRoutes(r *gin.Engine) {
 	OauthRoutes(r)
 	HealthRoutes(r)
 	SwaggerRoutes(r)
-	jiraRoutes(r, jiraHandler)
+	jiraRoutes(api, jiraHandler)
 	AIRoutes(r, aiHandler)
 }
 
@@ -34,11 +35,12 @@ func OauthRoutes(r *gin.Engine) {
 	r.GET("/jira/callback", oauth.Callback)
 }
 
-func jiraRoutes(r *gin.Engine, handler *jira.Handler){
+func jiraRoutes(r *gin.RouterGroup, handler *jira.Handler){
 	r.GET("/jira/projects", handler.GetProjects)
-	r.GET("/jira/:boardId/backlogs", handler.GetBacklogs)
+	r.GET("/jira/:projectKey/backlogs", handler.GetBacklogs)
 	r.GET("/jira/projects/:projectKey/team", handler.GetTeamMembers)
-	r.GET("/jira/:boardId/sprints", handler.GetSprints)
+	r.GET("/jira/:projectKey/sprints", handler.GetSprints)
+	r.GET("/jira/:projectKey/dependency-graph", handler.GetDependencyGraph)
 	// r.POST("/jira/<projectKey>/team", oauth.Callback)
 	// r.POST("/jira/<projectKey>/dependency/", oauth.Callback)
 	// r.POST("/jira/<projectKey>/<sprintId>/burndown", oauth.Callback)
