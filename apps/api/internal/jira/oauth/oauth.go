@@ -28,6 +28,7 @@ func getOAuthConfig() *oauth2.Config {
 			"read:issue:jira",
 			"read:issue:jira-software",
 			"read:issue-details:jira",
+			"read:email-address:jira",
 			"offline_access",
 		},
 		RedirectURL: config.AppConfig.RedirectURL,
