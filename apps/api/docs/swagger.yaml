@@ -1,16 +1,45 @@
 definitions:
-  jira.Priority:
-    enum:
-    - Low
-    - Medium
-    - High
-    - Critical
-    type: string
-    x-enum-varnames:
-    - PriorityLow
-    - PriorityMedium
-    - PriorityHigh
-    - PriorityCritical
+  jira.DependencyEdge:
+    properties:
+      from:
+        type: string
+      label:
+        type: string
+      to:
+        type: string
+      type:
+        type: string
+    type: object
+  jira.DependencyGraphData:
+    properties:
+      edges:
+        items:
+          $ref: '#/definitions/jira.DependencyEdge'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/jira.DependencyNode'
+        type: array
+    type: object
+  jira.DependencyNode:
+    properties:
+      assignee:
+        type: string
+      id:
+        type: string
+      isBlocked:
+        type: boolean
+      isBlocker:
+        type: boolean
+      isInCycle:
+        type: boolean
+      isSprintSafe:
+        type: boolean
+      priority:
+        type: string
+      summary:
+        type: string
+    type: object
   jira.ProjectCategory:
     properties:
       description:
@@ -47,6 +76,17 @@ definitions:
       velocity:
         type: integer
     type: object
+  jira.ProjectTeamResponse:
+    properties:
+      projectKey:
+        type: string
+      teamMembers:
+        items:
+          $ref: '#/definitions/jira.TeamMember'
+        type: array
+      velocity:
+        type: integer
+    type: object
   jira.SprintData:
     properties:
       sprintName:
@@ -54,63 +94,30 @@ definitions:
       velocity:
         type: integer
     type: object
-  jira.Ticket:
+  jira.TeamMember:
     properties:
-      assignee:
+      avatarUrl:
         type: string
-      assigneeAvatar:
+      email:
         type: string
-      assigneeName:
+      name:
         type: string
-      createdDate:
-        type: string
-      id:
-        type: string
-      key:
-        type: string
-      labels:
+      sprintHistory:
         items:
-          type: string
+          additionalProperties: {}
+          type: object
         type: array
-      parentIssueKey:
+      userId:
         type: string
-      priority:
-        allOf:
-        - $ref: '#/definitions/jira.Priority'
-        description: '"Low" | "Medium" | "High" | "Critical"'
-      reporter:
-        type: string
-      status:
-        type: string
-      storyPoints:
+      velocity:
         type: integer
-      summary:
-        type: string
-      type:
-        allOf:
-        - $ref: '#/definitions/jira.TicketType'
-        description: '"Bug" | "Story" | "Task" | "Epic"'
-      updatedDate:
-        type: string
     type: object
-  jira.TicketType:
-    enum:
-    - Bug
-    - Story
-    - Task
-    - Epic
-    type: string
-    x-enum-varnames:
-    - TypeBug
-    - TypeStory
-    - TypeTask
-    - TypeEpic
 info:
   contact: {}
 paths:
   /health:
     get:
-      description: Check if server is running
+      description: Check if server, Redis, Jira, and OpenAI are accessible
       produces:
       - application/json
       responses:
@@ -119,32 +126,37 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties: true
+            type: object
       summary: Health check
       tags:
       - Health
-  /jira/backlogs/{boardId}:
+  /jira/{projectKey}/backlogs:
     get:
       consumes:
       - application/json
-      description: Fetch all backlog issues for a specific Jira board
+      description: Fetch all backlog issues (unassigned to sprints) for a specific
+        Jira project
       parameters:
-      - description: Board ID
+      - description: Project Key
+        example: '"SCO"'
         in: path
-        minimum: 1
-        name: boardId
+        name: projectKey
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: List of backlog tickets
+          description: Backlog tickets with metadata
           schema:
-            items:
-              $ref: '#/definitions/jira.Ticket'
-            type: array
+            additionalProperties: true
+            type: object
         "400":
-          description: Invalid board ID
+          description: Invalid project key
           schema:
             additionalProperties: true
             type: object
@@ -159,6 +171,84 @@ paths:
             additionalProperties: true
             type: object
       summary: Get Jira Backlog Issues
+      tags:
+      - Jira
+  /jira/{projectKey}/dependency-graph:
+    get:
+      consumes:
+      - application/json
+      description: Fetch dependency graph with nodes and edges for backlog issues,
+        including cycle detection
+      parameters:
+      - description: Project Key
+        example: '"SCO"'
+        in: path
+        name: projectKey
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dependency graph with nodes and edges
+          schema:
+            $ref: '#/definitions/jira.DependencyGraphData'
+        "400":
+          description: Invalid project key
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Dependency Graph for Project Backlog
+      tags:
+      - Jira
+  /jira/{projectKey}/sprints:
+    get:
+      consumes:
+      - application/json
+      description: Fetch all sprints for a specific Jira project using JQL search
+      parameters:
+      - description: Project Key
+        example: '"SCO"'
+        in: path
+        name: projectKey
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of sprint data
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Invalid project key
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Sprints by Project
       tags:
       - Jira
   /jira/callback:
@@ -241,6 +331,43 @@ paths:
             additionalProperties: true
             type: object
       summary: Get Jira Projects
+      tags:
+      - Jira
+  /jira/projects/{projectKey}/team:
+    get:
+      consumes:
+      - application/json
+      description: Fetch all assignable team members for a specific Jira project
+      parameters:
+      - description: Project Key
+        example: '"SCO"'
+        in: path
+        name: projectKey
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Project team members with velocity data
+          schema:
+            $ref: '#/definitions/jira.ProjectTeamResponse'
+        "400":
+          description: Invalid project key
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Team Members by Project
       tags:
       - Jira
 swagger: "2.0"

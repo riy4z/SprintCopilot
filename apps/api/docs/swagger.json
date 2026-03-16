@@ -6,7 +6,7 @@
     "paths": {
         "/health": {
             "get": {
-                "description": "Check if server is running",
+                "description": "Check if server, Redis, Jira, and OpenAI are accessible",
                 "produces": [
                     "application/json"
                 ],
@@ -21,59 +21,9 @@
                             "type": "object",
                             "additionalProperties": true
                         }
-                    }
-                }
-            }
-        },
-        "/jira/backlogs/{boardId}": {
-            "get": {
-                "description": "Fetch all backlog issues for a specific Jira board",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Jira"
-                ],
-                "summary": "Get Jira Backlog Issues",
-                "parameters": [
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Board ID",
-                        "name": "boardId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of backlog tickets",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/jira.Ticket"
-                            }
-                        }
                     },
-                    "400": {
-                        "description": "Invalid board ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -201,23 +151,292 @@
                     }
                 }
             }
+        },
+        "/jira/projects/{projectKey}/team": {
+            "get": {
+                "description": "Fetch all assignable team members for a specific Jira project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Jira"
+                ],
+                "summary": "Get Team Members by Project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"SCO\"",
+                        "description": "Project Key",
+                        "name": "projectKey",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project team members with velocity data",
+                        "schema": {
+                            "$ref": "#/definitions/jira.ProjectTeamResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid project key",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/jira/{projectKey}/backlogs": {
+            "get": {
+                "description": "Fetch all backlog issues (unassigned to sprints) for a specific Jira project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Jira"
+                ],
+                "summary": "Get Jira Backlog Issues",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"SCO\"",
+                        "description": "Project Key",
+                        "name": "projectKey",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Backlog tickets with metadata",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid project key",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/jira/{projectKey}/dependency-graph": {
+            "get": {
+                "description": "Fetch dependency graph with nodes and edges for backlog issues, including cycle detection",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Jira"
+                ],
+                "summary": "Get Dependency Graph for Project Backlog",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"SCO\"",
+                        "description": "Project Key",
+                        "name": "projectKey",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dependency graph with nodes and edges",
+                        "schema": {
+                            "$ref": "#/definitions/jira.DependencyGraphData"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid project key",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/jira/{projectKey}/sprints": {
+            "get": {
+                "description": "Fetch all sprints for a specific Jira project using JQL search",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Jira"
+                ],
+                "summary": "Get Sprints by Project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"SCO\"",
+                        "description": "Project Key",
+                        "name": "projectKey",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of sprint data",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid project key",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
-        "jira.Priority": {
-            "type": "string",
-            "enum": [
-                "Low",
-                "Medium",
-                "High",
-                "Critical"
-            ],
-            "x-enum-varnames": [
-                "PriorityLow",
-                "PriorityMedium",
-                "PriorityHigh",
-                "PriorityCritical"
-            ]
+        "jira.DependencyEdge": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "jira.DependencyGraphData": {
+            "type": "object",
+            "properties": {
+                "edges": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/jira.DependencyEdge"
+                    }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/jira.DependencyNode"
+                    }
+                }
+            }
+        },
+        "jira.DependencyNode": {
+            "type": "object",
+            "properties": {
+                "assignee": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isBlocked": {
+                    "type": "boolean"
+                },
+                "isBlocker": {
+                    "type": "boolean"
+                },
+                "isInCycle": {
+                    "type": "boolean"
+                },
+                "isSprintSafe": {
+                    "type": "boolean"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
         },
         "jira.ProjectCategory": {
             "type": "object",
@@ -274,6 +493,23 @@
                 }
             }
         },
+        "jira.ProjectTeamResponse": {
+            "type": "object",
+            "properties": {
+                "projectKey": {
+                    "type": "string"
+                },
+                "teamMembers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/jira.TeamMember"
+                    }
+                },
+                "velocity": {
+                    "type": "integer"
+                }
+            }
+        },
         "jira.SprintData": {
             "type": "object",
             "properties": {
@@ -285,83 +521,32 @@
                 }
             }
         },
-        "jira.Ticket": {
+        "jira.TeamMember": {
             "type": "object",
             "properties": {
-                "assignee": {
+                "avatarUrl": {
                     "type": "string"
                 },
-                "assigneeAvatar": {
+                "email": {
                     "type": "string"
                 },
-                "assigneeName": {
+                "name": {
                     "type": "string"
                 },
-                "createdDate": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "key": {
-                    "type": "string"
-                },
-                "labels": {
+                "sprintHistory": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": "object",
+                        "additionalProperties": {}
                     }
                 },
-                "parentIssueKey": {
+                "userId": {
                     "type": "string"
                 },
-                "priority": {
-                    "description": "\"Low\" | \"Medium\" | \"High\" | \"Critical\"",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/jira.Priority"
-                        }
-                    ]
-                },
-                "reporter": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "storyPoints": {
+                "velocity": {
                     "type": "integer"
-                },
-                "summary": {
-                    "type": "string"
-                },
-                "type": {
-                    "description": "\"Bug\" | \"Story\" | \"Task\" | \"Epic\"",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/jira.TicketType"
-                        }
-                    ]
-                },
-                "updatedDate": {
-                    "type": "string"
                 }
             }
-        },
-        "jira.TicketType": {
-            "type": "string",
-            "enum": [
-                "Bug",
-                "Story",
-                "Task",
-                "Epic"
-            ],
-            "x-enum-varnames": [
-                "TypeBug",
-                "TypeStory",
-                "TypeTask",
-                "TypeEpic"
-            ]
         }
     }
 }
