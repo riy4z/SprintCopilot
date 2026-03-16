@@ -6,6 +6,7 @@ import (
 	jira "sprint-copilot/internal/jira"
 	oauth "sprint-copilot/internal/jira/oauth"
 	jiraService "sprint-copilot/internal/jira/service"
+	redisClient "sprint-copilot/internal/redis"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,17 +15,24 @@ import (
 )
 
 func InitRoutes(r *gin.Engine) {
-	// Initialize Jira service
+	
+	// Init Jira
 	jiraSvc := jiraService.NewService(oauth.GetOAuthClient)
 	jiraHandler := jira.NewHandler(jiraSvc)
 	api:=r.Group("/api/v1")
-
-	// Initialize OpenAI service
+	
+	// Init OpenAI 
 	aiSvc, _ := ai.NewService()
 	aiHandler := ai.NewHandler(aiSvc)
+	
+	//Init Redis
+	redisSvc := redisClient.NewService()
+	
+	//health checks
+	healthHandler := health.NewHandler(redisSvc, jiraSvc, aiSvc)
 
 	OauthRoutes(r)
-	HealthRoutes(r)
+	HealthRoutes(r, healthHandler)
 	SwaggerRoutes(r)
 	jiraRoutes(api, jiraHandler)
 	AIRoutes(r, aiHandler)
@@ -53,8 +61,8 @@ func AIRoutes(r *gin.Engine, handler *ai.Handler){
 // 	r.POST("/ai/retrospective/<projectKey>/<sprintId>", oauth.Callback)
 }
 
-func HealthRoutes(r *gin.Engine) {
-	r.GET("/health", health.HealthHandler)
+func HealthRoutes(r *gin.Engine, handler *health.Handler) {
+	r.GET("/health", handler.HealthHandler)
 }
 
 func SwaggerRoutes(r *gin.Engine){

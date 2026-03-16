@@ -15,6 +15,10 @@ type Config struct {
 	JiraSecret string
 	RedirectURL string
 	OpenAIKey string
+	RedisHost string
+	RedisPort string
+	RedisPassword string
+	RedisDB string
 }
 
 var AppConfig Config
@@ -32,4 +36,8 @@ func LoadConfig() {
 	AppConfig.JiraSecret = os.Getenv("JIRA_SECRET")
 	AppConfig.RedirectURL = os.Getenv("OAUTH_REDIRECT_URL")
 	AppConfig.OpenAIKey = os.Getenv("OPENAI_KEY")
+	AppConfig.RedisHost = os.Getenv("REDIS_HOST")
+	AppConfig.RedisPort = os.Getenv("REDIS_PORT")
+	AppConfig.RedisPassword = os.Getenv("REDIS_PASSWORD")
+	AppConfig.RedisDB = os.Getenv("REDIS_DB")
 }

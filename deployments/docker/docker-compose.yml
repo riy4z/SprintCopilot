@@ -1,0 +1,45 @@
+name: sprint-copilot
+
+services:
+
+  redis:
+    image: redis:7
+    container_name: redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    mem_limit: 256m
+
+  api:
+    container_name: api-dev
+    build:
+      context: ../../apps/api
+      dockerfile: ../../deployments/docker/Dockerfile.dev.backend
+    volumes:
+      - ../../apps/api:/app
+      - go-mod-cache:/go/pkg/mod
+    ports:
+      - "4000:4000"
+    depends_on:
+      - redis
+    env_file:
+      - ../../apps/api/.env
+    mem_limit: 1g
+
+  web:
+    image: node:20-alpine
+    container_name: web-dev
+    working_dir: /app
+    volumes:
+      - ../../apps/web:/app
+      - web-node-modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host"
+    mem_limit: 512m
+
+volumes:
+  redis-data:
+  go-mod-cache:
+  web-node-modules:
