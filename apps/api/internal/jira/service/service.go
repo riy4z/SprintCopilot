@@ -5,11 +5,20 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 
 func (c *Client) FetchProjects(ctx context.Context) ([]ProjectResponse, error) {
+	cacheKey := fmt.Sprintf("jira:projects:%s", c.cloudID)
 
+	// Cache hit
+	var projects []ProjectResponse
+	if c.getFromCache(ctx, cacheKey, &projects) {
+		return projects, nil
+	}
+	
+	//Cache miss
 	url := c.buildJiraURL("/rest/api/3/project")
 
 	req, err := c.newAuthenticatedRequest(ctx, http.MethodGet, url)
@@ -22,10 +31,7 @@ func (c *Client) FetchProjects(ctx context.Context) ([]ProjectResponse, error) {
 		return nil, err
 	}
 
-	var projects []ProjectResponse
-
 	for _, p := range jiraProjects {
-
 		project := ProjectResponse{
 			ID:   p.ID,
 			Key:  p.Key,
@@ -44,13 +50,21 @@ func (c *Client) FetchProjects(ctx context.Context) ([]ProjectResponse, error) {
 		projects = append(projects, project)
 	}
 
+	c.saveToCache(ctx, cacheKey, projects, 5*time.Minute)
+
 	return projects, nil
 }
 
-
-
 func (c *Client) FetchBacklogs(ctx context.Context, projectKey string) ([]Ticket, error) {
+	cacheKey := "jira:" + c.cloudID + ":" + projectKey + ":backlogs"
 
+	// Cache-hit
+	var tickets []Ticket
+	if c.getFromCache(ctx, cacheKey, &tickets) {
+		return tickets, nil
+	}
+
+	// Cache-miss
 	jql := fmt.Sprintf("project=%s AND sprint IS EMPTY ORDER BY created DESC", projectKey)
 	fields := "summary,status,priority,description,issuetype,assignee,reporter,labels,created,updated,customfield_10016,parent"
 
@@ -116,10 +130,7 @@ func (c *Client) FetchBacklogs(ctx context.Context, projectKey string) ([]Ticket
 		return nil, err
 	}
 
-	var tickets []Ticket
-
 	for _, issue := range result.Issues {
-
 		ticket := Ticket{
 			ID:          issue.ID,
 			Key:         issue.Key,
@@ -135,7 +146,6 @@ func (c *Client) FetchBacklogs(ctx context.Context, projectKey string) ([]Ticket
 		}
 
 		if issue.Fields.Assignee != nil {
-
 			ticket.Assignee = &issue.Fields.Assignee.AccountID
 			ticket.AssigneeName = &issue.Fields.Assignee.DisplayName
 
@@ -155,10 +165,21 @@ func (c *Client) FetchBacklogs(ctx context.Context, projectKey string) ([]Ticket
 		tickets = append(tickets, ticket)
 	}
 
+	c.saveToCache(ctx, cacheKey, tickets, 5*time.Minute)
+
 	return tickets, nil
 }
 
 func (c *Client) FetchSprints(ctx context.Context, projectKey string) ([]map[string]any, error) {
+	cacheKey := "jira:" + c.cloudID + ":" + projectKey + ":sprints"
+
+	// Cache-hit
+	var sprints []map[string]any
+	if c.getFromCache(ctx, cacheKey, &sprints) {
+		return sprints, nil
+	}
+
+	//Cache-miss
 	jql := fmt.Sprintf("project=%s AND sprint is not EMPTY ORDER BY sprint DESC, created DESC", projectKey)
 
 	path := fmt.Sprintf(
@@ -187,7 +208,7 @@ func (c *Client) FetchSprints(ctx context.Context, projectKey string) ([]map[str
 	sprintMap := make(map[string]map[string]any)
 
 	for _, issue := range result.Issues {
-		// customfield_10020 -> sprint field 
+		// customfield_10020 -> sprint field
 		if sprintField, ok := issue.Fields["customfield_10020"].([]any); ok {
 			for _, s := range sprintField {
 				if sprintData, ok := s.(map[string]any); ok {
@@ -200,17 +221,27 @@ func (c *Client) FetchSprints(ctx context.Context, projectKey string) ([]map[str
 		}
 	}
 
-	sprints := make([]map[string]any, 0, len(sprintMap))
+	sprints = make([]map[string]any, 0, len(sprintMap))
 	for _, sprint := range sprintMap {
 		sprints = append(sprints, sprint)
 	}
 
+	// Save to cache
+	c.saveToCache(ctx, cacheKey, sprints, 5*time.Minute)
+
 	return sprints, nil
 }
 
-
 func (c *Client) FetchTeamMembers(ctx context.Context, projectKey string) (*ProjectTeamResponse, error) {
+	cacheKey := "jira:" + c.cloudID + ":" + projectKey + ":team"
 
+	// Cache-hit
+	var response ProjectTeamResponse
+	if c.getFromCache(ctx, cacheKey, &response) {
+		return &response, nil
+	}
+
+	//Cache-miss
 	path := fmt.Sprintf("/rest/api/3/user/assignable/search?project=%s", projectKey)
 	url := c.buildJiraURL(path)
 
@@ -225,16 +256,32 @@ func (c *Client) FetchTeamMembers(ctx context.Context, projectKey string) (*Proj
 	}
 
 
-	var response ProjectTeamResponse
+	sprintVelocities, memberSprintVelocities, err := c.calculateSprintVelocities(ctx, projectKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var totalVelocity int
+	sprintCount := len(sprintVelocities)
+	for _, v := range sprintVelocities {
+		totalVelocity += v.Velocity
+	}
+
+	averageVelocity := int8(0)
+	if sprintCount > 0 {
+		averageVelocity = int8(totalVelocity / sprintCount)
+	}
+
 	response.ProjectKey = projectKey
-	response.Velocity = 17
+	response.Velocity = averageVelocity
 
 	for _, u := range users {
+		userId := u["accountId"].(string)
 
 		member := TeamMember{
-			UserId:  u["accountId"].(string),
-			Name:    u["displayName"].(string),
-			Velocity: 0,
+			UserId:        userId,
+			Name:          u["displayName"].(string),
+			Velocity:      0,
 			SprintHistory: []map[string]any{},
 		}
 
@@ -248,14 +295,42 @@ func (c *Client) FetchTeamMembers(ctx context.Context, projectKey string) (*Proj
 			}
 		}
 
+		if memberVelocities, exists := memberSprintVelocities[userId]; exists {
+			for _, sprintVel := range memberVelocities {
+				member.SprintHistory = append(member.SprintHistory, map[string]any{
+					"sprintId":   sprintVel.SprintID,
+					"sprintName": sprintVel.SprintName,
+					"velocity":   sprintVel.Velocity,
+				})
+			}
+
+			var totalMemberVelocity int
+			for _, v := range memberVelocities {
+				totalMemberVelocity += v.Velocity
+			}
+			if len(memberVelocities) > 0 {
+				member.Velocity = int8(totalMemberVelocity / len(memberVelocities))
+			}
+		}
+
 		response.TeamMembers = append(response.TeamMembers, member)
 	}
+
+	c.saveToCache(ctx, cacheKey, &response, 5*time.Minute)
 
 	return &response, nil
 }
 
 func (c *Client) FetchDependencyGraph(ctx context.Context, projectKey string) (*DependencyGraphData, error) {
-	// Fetch backlog issues with issuelinks
+	cacheKey := "jira:" + c.cloudID + ":" + projectKey + ":dependencyGraph"
+
+	// Cache-hit
+	var response DependencyGraphData
+	if c.getFromCache(ctx, cacheKey, &response) {
+		return &response, nil
+	}
+
+	//Cache Miss
 	jql := fmt.Sprintf("project=%s AND sprint IS EMPTY ORDER BY created DESC", projectKey)
 
 	fields := "summary,status,priority,assignee,issuelinks"
@@ -404,10 +479,14 @@ func (c *Client) FetchDependencyGraph(ctx context.Context, projectKey string) (*
 		nodes = append(nodes, *node)
 	}
 
-	return &DependencyGraphData{
+	response = DependencyGraphData{
 		Nodes: nodes,
 		Edges: edges,
-	}, nil
+	}
+
+	c.saveToCache(ctx, cacheKey, &response, 5*time.Minute)
+
+	return &response, nil
 }
 
 

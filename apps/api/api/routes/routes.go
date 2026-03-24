@@ -14,22 +14,14 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func InitRoutes(r *gin.Engine) {
-	
-	// Init Jira
-	jiraSvc := jiraService.NewService(oauth.GetOAuthClient)
+func InitRoutes(r *gin.Engine, redisSvc *redisClient.Service, jiraSvc *jiraService.Service, aiSvc *ai.Service) {
+
+	// Initialize handlers with the provided services
 	jiraHandler := jira.NewHandler(jiraSvc)
-	api:=r.Group("/api/v1")
-	
-	// Init OpenAI 
-	aiSvc, _ := ai.NewService()
 	aiHandler := ai.NewHandler(aiSvc)
-	
-	//Init Redis
-	redisSvc := redisClient.NewService()
-	
-	//health checks
 	healthHandler := health.NewHandler(redisSvc, jiraSvc, aiSvc)
+
+	api := r.Group("/api/v1")
 
 	OauthRoutes(r)
 	HealthRoutes(r, healthHandler)

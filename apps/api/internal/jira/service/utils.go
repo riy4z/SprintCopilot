@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 )
 
 //constructs a Jira API URL with the given cloudID and path
@@ -103,4 +105,143 @@ func DetectCycles(graph map[string][]string) map[string]bool {
 func PrintJSON(v any) {
 	b, _ := json.MarshalIndent(v, "", "  ")
 	fmt.Println(string(b))
+}
+
+//Redis helper
+func (c *Client) getFromCache(ctx context.Context, key string, target any) bool {
+	if c.redis == nil {
+		return false
+	}
+
+	redisClient, err := c.redis.GetClient(ctx)
+	if err != nil {
+		return false
+	}
+
+	cached, err := redisClient.Get(ctx, key)
+	if err != nil {
+		return false
+	}
+
+	return json.Unmarshal([]byte(cached), target) == nil
+}
+
+func (c *Client) saveToCache(ctx context.Context, key string, data any, ttl time.Duration) {
+	if c.redis == nil {
+		return
+	}
+
+	redisClient, err := c.redis.GetClient(ctx)
+	if err != nil {
+		return
+	}
+
+	marshaled, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+
+	redisClient.Set(ctx, key, marshaled, ttl)
+}
+
+
+// Fetch all closed sprints with their issues
+func (c *Client) calculateSprintVelocities(ctx context.Context, projectKey string) ([]sprintVelocity, map[string][]memberSprintVelocity, error) {
+	jql := fmt.Sprintf("project=%s AND sprint in closedSprints() ORDER BY sprint DESC", projectKey)
+	fields := "assignee,customfield_10016,customfield_10020,status"
+
+	path := fmt.Sprintf(
+		"/rest/api/3/search/jql?jql=%s&maxResults=500&fields=%s",
+		url.QueryEscape(jql),
+		url.QueryEscape(fields),
+	)
+	endpoint := c.buildJiraURL(path)
+
+	req, err := c.newAuthenticatedRequest(ctx, http.MethodGet, endpoint)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var result struct {
+		Issues []struct {
+			Fields struct {
+				Assignee *struct {
+					AccountID string `json:"accountId"`
+				} `json:"assignee"`
+				CustomField_10016 *float64         `json:"customfield_10016"` // Story points
+				CustomField_10020 []map[string]any `json:"customfield_10020"` // Sprint field
+				Status            struct {
+					StatusCategory struct {
+						Key string `json:"key"`
+					} `json:"statusCategory"`
+				} `json:"status"`
+			} `json:"fields"`
+		} `json:"issues"`
+	}
+
+	if err := c.executeRequest(req, &result); err != nil {
+		return nil, nil, err
+	}
+
+	sprintVelocityMap := make(map[string]*sprintVelocity)
+	memberSprintMap := make(map[string]map[string]int) 
+
+	for _, issue := range result.Issues {
+		if issue.Fields.Status.StatusCategory.Key != "done" {
+			continue
+		}
+
+		storyPoints := 0
+		if issue.Fields.CustomField_10016 != nil {
+			storyPoints = int(*issue.Fields.CustomField_10016)
+		}
+
+		if len(issue.Fields.CustomField_10020) > 0 {
+			for _, sprintData := range issue.Fields.CustomField_10020 {
+				sprintID := fmt.Sprintf("%v", sprintData["id"])
+				sprintName := fmt.Sprintf("%v", sprintData["name"])
+
+				if state, ok := sprintData["state"].(string); !ok || state != "closed" {
+					continue
+				}
+
+				if _, exists := sprintVelocityMap[sprintID]; !exists {
+					sprintVelocityMap[sprintID] = &sprintVelocity{
+						SprintID:   sprintID,
+						SprintName: sprintName,
+						Velocity:   0,
+					}
+				}
+				sprintVelocityMap[sprintID].Velocity += storyPoints
+
+				if issue.Fields.Assignee != nil {
+					userId := issue.Fields.Assignee.AccountID
+					if _, exists := memberSprintMap[userId]; !exists {
+						memberSprintMap[userId] = make(map[string]int)
+					}
+					memberSprintMap[userId][sprintID] += storyPoints
+				}
+			}
+		}
+	}
+
+	var sprintVelocities []sprintVelocity
+	for _, sv := range sprintVelocityMap {
+		sprintVelocities = append(sprintVelocities, *sv)
+	}
+
+	memberSprintVelocities := make(map[string][]memberSprintVelocity)
+	for userId, sprintMap := range memberSprintMap {
+		for sprintID, points := range sprintMap {
+			if sv, exists := sprintVelocityMap[sprintID]; exists {
+				memberSprintVelocities[userId] = append(memberSprintVelocities[userId], memberSprintVelocity{
+					SprintID:   sprintID,
+					SprintName: sv.SprintName,
+					Velocity:   points,
+				})
+			}
+		}
+	}
+
+	return sprintVelocities, memberSprintVelocities, nil
 }
