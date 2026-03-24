@@ -12,7 +12,6 @@ import (
 
 
 func (c *AIClient) PredictStoryPoints(ctx context.Context, tickets []TicketItem) ([]StoryPointPrediction, error) {
-
 	systemPromptBytes, err := os.ReadFile("internal/ai/prompts/predictStoryPoints.md")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read system prompt: %w", err)

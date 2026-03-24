@@ -2,13 +2,31 @@ package jira
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 
 func (c *Client) FetchProjects(ctx context.Context) ([]ProjectResponse, error) {
+	cacheKey := fmt.Sprintf("jira:projects:%s",c.cloudID)
+
+	// cache-hit
+		if c.redis != nil {
+			redisClient, err := c.redis.GetClient(ctx)
+			if err == nil {
+				cached, err := redisClient.Get(ctx, cacheKey)
+				if err == nil {
+					var projects []ProjectResponse
+					if json.Unmarshal([]byte(cached), &projects) == nil {
+						return projects, nil
+					}
+				}
+			}
+		}
+	
 
 	url := c.buildJiraURL("/rest/api/3/project")
 
@@ -44,10 +62,16 @@ func (c *Client) FetchProjects(ctx context.Context) ([]ProjectResponse, error) {
 		projects = append(projects, project)
 	}
 
+	if c.redis != nil {
+		redisClient, err := c.redis.GetClient(ctx)
+		if err == nil {
+			data, _ := json.Marshal(projects)
+			redisClient.Set(ctx, cacheKey, data, 5*time.Minute)
+		}
+	}
+
 	return projects, nil
 }
-
-
 
 func (c *Client) FetchBacklogs(ctx context.Context, projectKey string) ([]Ticket, error) {
 
@@ -159,6 +183,23 @@ func (c *Client) FetchBacklogs(ctx context.Context, projectKey string) ([]Ticket
 }
 
 func (c *Client) FetchSprints(ctx context.Context, projectKey string) ([]map[string]any, error) {
+
+	cacheKey:= "jira:"+c.cloudID+":"+projectKey+":sprints"
+
+	// cache-hit
+		if c.redis != nil {
+		redisClient, err := c.redis.GetClient(ctx)
+		if err == nil {
+			cached, err := redisClient.Get(ctx, cacheKey)
+			if err == nil {
+				var sprints []map[string]any
+				if json.Unmarshal([]byte(cached), &sprints) == nil {
+					return sprints, nil
+				}
+			}
+		}
+		}
+
 	jql := fmt.Sprintf("project=%s AND sprint is not EMPTY ORDER BY sprint DESC, created DESC", projectKey)
 
 	path := fmt.Sprintf(
@@ -205,11 +246,33 @@ func (c *Client) FetchSprints(ctx context.Context, projectKey string) ([]map[str
 		sprints = append(sprints, sprint)
 	}
 
+	if c.redis != nil {
+		redisClient, err := c.redis.GetClient(ctx)
+		if err == nil {
+			data, _ := json.Marshal(sprints)
+			redisClient.Set(ctx, cacheKey, data, 5*time.Minute)
+		}
+	}
+
 	return sprints, nil
 }
 
-
 func (c *Client) FetchTeamMembers(ctx context.Context, projectKey string) (*ProjectTeamResponse, error) {
+	cacheKey := "jira:" + c.cloudID + ":" + projectKey +":team"
+
+	// cache-hit
+		if c.redis != nil {
+			redisClient, err := c.redis.GetClient(ctx)
+			if err == nil {
+				cached, err := redisClient.Get(ctx, cacheKey)
+				if err == nil {
+					var response ProjectTeamResponse
+					if json.Unmarshal([]byte(cached), &response) == nil {
+						return &response, nil
+					}
+				}
+			}
+		}
 
 	path := fmt.Sprintf("/rest/api/3/user/assignable/search?project=%s", projectKey)
 	url := c.buildJiraURL(path)
@@ -250,11 +313,34 @@ func (c *Client) FetchTeamMembers(ctx context.Context, projectKey string) (*Proj
 
 		response.TeamMembers = append(response.TeamMembers, member)
 	}
+	
+	if c.redis != nil {
+	redisClient, err := c.redis.GetClient(ctx)
+	if err == nil {
+		data, _ := json.Marshal(response)
+		redisClient.Set(ctx, cacheKey, data, 5*time.Minute)
+	}
+}
 
 	return &response, nil
 }
 
 func (c *Client) FetchDependencyGraph(ctx context.Context, projectKey string) (*DependencyGraphData, error) {
+
+	cacheKey := "jira:"+c.cloudID+":"+projectKey+":dependencyGraph"
+	// cache-hit
+	if c.redis != nil {
+		redisClient, err := c.redis.GetClient(ctx)
+		if err == nil {
+			cached, err := redisClient.Get(ctx, cacheKey)
+			if err == nil {
+				var response DependencyGraphData
+				if json.Unmarshal([]byte(cached), &response) == nil {
+					return &response, nil
+				}
+			}
+		}
+	}
 	// Fetch backlog issues with issuelinks
 	jql := fmt.Sprintf("project=%s AND sprint IS EMPTY ORDER BY created DESC", projectKey)
 
@@ -404,10 +490,20 @@ func (c *Client) FetchDependencyGraph(ctx context.Context, projectKey string) (*
 		nodes = append(nodes, *node)
 	}
 
-	return &DependencyGraphData{
+	response := DependencyGraphData{
 		Nodes: nodes,
 		Edges: edges,
-	}, nil
+	}
+
+	if c.redis != nil {
+	redisClient, err := c.redis.GetClient(ctx)
+	if err == nil {
+		data, _ := json.Marshal(response)
+		redisClient.Set(ctx, cacheKey, data, 5*time.Minute)
+	}
+	}
+
+	return &response, nil
 }
 
 
