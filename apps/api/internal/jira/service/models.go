@@ -130,6 +130,18 @@ type ProjectTeamResponse struct {
 	TeamMembers		[]TeamMember `json:"teamMembers"`
 }
 
+type sprintVelocity struct {
+	SprintID   string
+	SprintName string
+	Velocity   int
+}
+
+type memberSprintVelocity struct {
+	SprintID   string
+	SprintName string
+	Velocity   int
+}
+
 // Dependency Graph
 
 type DependencyNode struct {
